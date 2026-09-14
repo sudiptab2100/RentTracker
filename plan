@@ -1,0 +1,29 @@
+Create a lightweight Android Flutter Application for tracking rent for Flat owners:
+- Use firebase for authentication and database management.
+- Use email and password authentication / phone number authentication / Google authentication for user login
+- Flat owners should be able add buildings:
+  - In a flat they should be able to add floors
+  - In a floor they should be able to add apartments
+  - Each apartment should have details like:
+    - tenant name
+    - address
+    - contact number
+    - whatsapp contact number (let add from saved contacts)
+    - emergency contact number (let add from saved contacts)
+    - security deposit amount (kept separately)
+    - rent amount
+    - paid amount)
+    - give feature to add monthly electric bill
+    - give feature to add any extra charges
+    - rent will be added automatiocally on a monthly basis
+    - owner can update rent amount which will be effective from next month or current month depending on what owner chooses
+    - any amount paid by tenant should be added to the paid amount and reflected in the rent tracking
+    - If total amont paid by tenant is less than the rent amount, the app should show the remaining balance. (in Red)
+    - if total amount paid by tenant is equal to or more than the rent amount, the app should show the balance as zero or in green.
+    - owner should be able to view the rent history for each apartment, including past payments and any outstanding balances.
+    - owner should be able to generate monthly rent reports for each apartment, including total rent collected, outstanding balances, and any extra charges.
+- The app should have a dashboard for flat owners to view all their buildings, floors, and apartments with their respective rent details.
+- Owner should be able to send monthly rent pdf reports to tenants via whatsapp
+- Also send reminder to tenants for pending rent payments via whatsapp
+- Owner should be able to export all past rent reports and tenant details to a CSV file for record-keeping.
+- Keep a master export feature for all buildings, floors, and apartments data in a best appropiate format so that if we need to migrate to another app, we can easily do so. Also keep a master import feature also which will allow us to import data in the same app pointing to different firebase project or database and data will be synced to DB accordingly.
