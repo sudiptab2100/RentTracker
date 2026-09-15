@@ -27,7 +27,7 @@ class ApartmentsScreen extends ConsumerWidget {
     final floors = ref.watch(floorsProvider(buildingId)).value ?? const [];
     final floor = floors.where((f) => f.id == floorId).firstOrNull;
     final apartments = ref.watch(apartmentsProvider((buildingId, floorId)));
-    final summary = ref.watch(portfolioSummaryProvider).value;
+    final overview = ref.watch(overviewProvider).value;
 
     return Scaffold(
       appBar: AppBar(title: Text(floor?.name ?? 'Apartments')),
@@ -56,8 +56,8 @@ class ApartmentsScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
             children: list.map((apt) {
-              final status = summary?.statuses
-                  .where((s) => s.ref.apartmentId == apt.id)
+              final status = overview?.apartments
+                  .where((a) => a.apartment.id == apt.id)
                   .firstOrNull;
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 6),
@@ -110,7 +110,7 @@ class ApartmentsScreen extends ConsumerWidget {
                             await ref
                                 .read(apartmentRepositoryProvider)
                                 .deleteDeep(buildingId, floorId, apt.id);
-                            ref.invalidate(portfolioSummaryProvider);
+                            ref.invalidate(overviewProvider);
                           } catch (e) {
                             if (context.mounted) {
                               showSnack(context, '$e', isError: true);

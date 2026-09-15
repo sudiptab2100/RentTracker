@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/validators.dart';
+import '../../models/phone_number.dart';
 import '../../services/auth_service.dart';
 import '../../services/firebase_providers.dart';
+import '../../widgets/phone_field.dart';
 import '../../widgets/ui_helpers.dart';
 
 class PhoneLoginScreen extends ConsumerStatefulWidget {
@@ -16,7 +17,7 @@ class PhoneLoginScreen extends ConsumerStatefulWidget {
 }
 
 class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
-  final _phone = TextEditingController();
+  PhoneNumber _phone = PhoneNumber.empty;
   final _code = TextEditingController();
   bool _loading = false;
   bool _codeSent = false;
@@ -25,21 +26,19 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
 
   @override
   void dispose() {
-    _phone.dispose();
     _code.dispose();
     super.dispose();
   }
 
   Future<void> _sendCode() async {
-    final err = Validators.phone(_phone.text);
-    if (err != null) {
-      showSnack(context, err, isError: true);
+    if (_phone.number.length != 10) {
+      showSnack(context, 'Enter a valid 10-digit number', isError: true);
       return;
     }
     setState(() => _loading = true);
     try {
       await ref.read(authServiceProvider).verifyPhoneNumber(
-            phoneNumber: _phone.text,
+            phoneNumber: _phone.e164,
             resendToken: _resendToken,
             onAutoVerify: (credential) async {
               await ref
@@ -106,16 +105,17 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
                 children: [
                   Icon(Icons.sms_outlined, size: 48, color: theme.colorScheme.primary),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _phone,
-                    enabled: !_codeSent,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone number',
-                      hintText: '+91 98765 43210',
-                      prefixIcon: Icon(Icons.phone_outlined),
-                    ),
-                  ),
+                  if (!_codeSent)
+                    PhoneField(
+                      label: 'Phone number',
+                      icon: Icons.phone_outlined,
+                      initial: _phone,
+                      onChanged: (v) => _phone = v,
+                    )
+                  else
+                    Text('Code sent to ${_phone.display}',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium),
                   if (_codeSent) ...[
                     const SizedBox(height: 12),
                     TextField(

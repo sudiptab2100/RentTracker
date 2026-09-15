@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/money.dart';
 import '../../core/month_key.dart';
 import '../../models/apartment.dart';
+import '../../models/ledger.dart';
 import '../../models/ledger_summary.dart';
 import '../../models/rent_record.dart';
 import '../../repositories/apartment_repository.dart';
@@ -14,6 +15,7 @@ import '../../widgets/async_value_widget.dart';
 import '../../widgets/balance_view.dart';
 import '../../widgets/ui_helpers.dart';
 import '../dashboard/dashboard_providers.dart';
+import '../reports/report_text.dart';
 import '../whatsapp/whatsapp_service.dart';
 import 'apartment_form.dart';
 import '../rent/rent_actions.dart';
@@ -45,7 +47,7 @@ class _ApartmentDetailScreenState extends ConsumerState<ApartmentDetailScreen> {
     _generationStarted = true;
     final created =
         await ref.read(rentEngineProvider).ensureGenerated(_path, apt);
-    if (created > 0) ref.invalidate(portfolioSummaryProvider);
+    if (created > 0) ref.invalidate(overviewProvider);
   }
 
   Future<void> _launch(Uri uri) async {
@@ -163,15 +165,15 @@ class _TenantCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (apt.contactNumber.isNotEmpty)
+                if (apt.contact.isNotEmpty)
                   _contactChip(context, Icons.call, 'Call',
-                      () => onLaunch(Uri.parse('tel:${apt.contactNumber}'))),
-                if (apt.whatsappNumber.isNotEmpty)
+                      () => onLaunch(Uri.parse('tel:${apt.contact.e164}'))),
+                if (apt.whatsapp.isNotEmpty)
                   _contactChip(context, Icons.chat, 'WhatsApp',
-                      () => whatsAppService.openChat(phone: apt.whatsappNumber)),
-                if (apt.emergencyNumber.isNotEmpty)
+                      () => whatsAppService.openChat(phone: apt.whatsapp.e164)),
+                if (apt.emergency.isNotEmpty)
                   _contactChip(context, Icons.emergency, 'Emergency',
-                      () => onLaunch(Uri.parse('tel:${apt.emergencyNumber}'))),
+                      () => onLaunch(Uri.parse('tel:${apt.emergency.e164}'))),
               ],
             ),
             const Divider(height: 24),
@@ -237,6 +239,7 @@ class _LedgerSection extends ConsumerWidget {
     final currentMonth = MonthKey.current();
     final current = records.where((r) => r.month == currentMonth).firstOrNull;
     final summary = LedgerSummary.from(records);
+    final ledger = Ledger.from(records);
 
     if (apt.rentSchedule.isEmpty) {
       return Card(
@@ -267,6 +270,8 @@ class _LedgerSection extends ConsumerWidget {
           path: path,
           month: currentMonth,
           record: current,
+          previousBalance: ledger.previousBalanceFor(currentMonth),
+          totalPayable: ledger.cumulativeThrough(currentMonth),
           buildingId: buildingId,
           floorId: floorId,
         ),
@@ -312,6 +317,8 @@ class _CurrentMonthCard extends ConsumerWidget {
     required this.path,
     required this.month,
     required this.record,
+    required this.previousBalance,
+    required this.totalPayable,
     required this.buildingId,
     required this.floorId,
   });
@@ -320,6 +327,8 @@ class _CurrentMonthCard extends ConsumerWidget {
   final ApartmentPath path;
   final String month;
   final RentRecord? record;
+  final int previousBalance;
+  final int totalPayable;
   final String buildingId;
   final String floorId;
 
@@ -339,7 +348,7 @@ class _CurrentMonthCard extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(MonthKey.label(month), style: theme.textTheme.titleMedium),
-                BalanceChip(balance: rec.balance),
+                BalanceChip(balance: totalPayable),
               ],
             ),
             const Divider(height: 20),
@@ -347,15 +356,19 @@ class _CurrentMonthCard extends ConsumerWidget {
             if (rec.electricBill > 0) _line(context, 'Electricity', rec.electricBill),
             for (final c in rec.extraCharges)
               _line(context, c.label.isEmpty ? 'Extra charge' : c.label, c.amount),
+            if (previousBalance > 0)
+              _line(context, 'Previous month due', previousBalance)
+            else if (previousBalance < 0)
+              _line(context, 'Previous month advance', -previousBalance),
             const Divider(height: 20),
-            _line(context, 'Total due', rec.totalDue, bold: true),
-            _line(context, 'Paid', rec.paidAmount),
+            _line(context, 'This month charges', rec.monthCharges, bold: true),
+            _line(context, 'Paid this month', rec.paidAmount),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(rec.isSettled ? 'Balance' : 'Balance due',
+                Text(totalPayable > 0 ? 'Total payable' : 'Balance',
                     style: theme.textTheme.titleSmall),
-                BalanceText(balance: rec.balance, style: theme.textTheme.titleMedium),
+                BalanceText(balance: totalPayable, style: theme.textTheme.titleMedium),
               ],
             ),
             const SizedBox(height: 12),
@@ -387,9 +400,9 @@ class _CurrentMonthCard extends ConsumerWidget {
                   icon: const Icon(Icons.description_outlined, size: 18),
                   label: const Text('Report'),
                 ),
-                if (rec.balance > 0 && apt.whatsappNumber.isNotEmpty)
+                if (totalPayable > 0 && apt.whatsapp.isNotEmpty)
                   OutlinedButton.icon(
-                    onPressed: () => _sendReminder(context, apt, rec),
+                    onPressed: () => _sendReminder(context, apt, totalPayable),
                     icon: const Icon(Icons.notifications_active_outlined, size: 18),
                     label: const Text('Remind'),
                   ),
@@ -402,11 +415,9 @@ class _CurrentMonthCard extends ConsumerWidget {
   }
 
   Future<void> _sendReminder(
-      BuildContext context, Apartment apt, RentRecord rec) async {
-    final message = 'Hello ${apt.tenantName.isEmpty ? '' : '${apt.tenantName}, '}'
-        'this is a friendly reminder that rent for ${MonthKey.label(rec.month)} '
-        'of ${Money.format(rec.balance)} is pending. Thank you.';
-    final ok = await whatsAppService.openChat(phone: apt.whatsappNumber, text: message);
+      BuildContext context, Apartment apt, int amount) async {
+    final message = buildReminderText(apt: apt, outstanding: amount);
+    final ok = await whatsAppService.openChat(phone: apt.whatsapp.e164, text: message);
     if (!ok && context.mounted) {
       showSnack(context, 'Could not open WhatsApp', isError: true);
     }

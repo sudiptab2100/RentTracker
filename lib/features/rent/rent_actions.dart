@@ -8,6 +8,8 @@ import '../../models/apartment.dart';
 import '../../models/extra_charge.dart';
 import '../../models/rent_record.dart';
 import '../../repositories/apartment_repository.dart';
+import '../../repositories/building_repository.dart';
+import '../../repositories/rent_repository.dart';
 import '../../widgets/ui_helpers.dart';
 import 'rent_engine.dart';
 
@@ -198,26 +200,52 @@ class _ElectricSheet extends ConsumerStatefulWidget {
 }
 
 class _ElectricSheetState extends ConsumerState<_ElectricSheet> {
-  late final _amount = TextEditingController(
-      text: widget.record.electricBill > 0
-          ? Money.toEditString(widget.record.electricBill)
-          : '');
+  late final _prev = TextEditingController(
+      text: widget.record.prevUnits > 0 ? widget.record.prevUnits.toString() : '');
+  late final _curr = TextEditingController(
+      text: widget.record.currUnits > 0 ? widget.record.currUnits.toString() : '');
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    _prefillPrevReading();
+  }
+
+  Future<void> _prefillPrevReading() async {
+    if (widget.record.prevUnits != 0 || _prev.text.isNotEmpty) return;
+    final prevMonth = MonthKey.prev(widget.record.month);
+    final prevRec = await ref.read(rentRepositoryProvider).getRecord(widget.path, prevMonth);
+    if (prevRec != null && prevRec.currUnits > 0 && mounted && _prev.text.isEmpty) {
+      setState(() => _prev.text = prevRec.currUnits.toString());
+    }
+  }
+
+  int get _unitPrice {
+    final buildings = ref.watch(buildingsProvider).value ?? const [];
+    final b = buildings.where((x) => x.id == widget.path.$1).firstOrNull;
+    return b?.electricityUnitPrice ?? 0;
+  }
+
+  @override
   void dispose() {
-    _amount.dispose();
+    _prev.dispose();
+    _curr.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
+    final prev = int.tryParse(_prev.text.trim()) ?? 0;
+    final curr = int.tryParse(_curr.text.trim()) ?? 0;
     setState(() => _saving = true);
     try {
-      await ref.read(rentEngineProvider).setElectricBill(
+      await ref.read(rentEngineProvider).setElectricReading(
             widget.path,
             widget.apt,
             widget.record.month,
-            Money.parse(_amount.text),
+            prevUnits: prev,
+            currUnits: curr,
+            unitPrice: _unitPrice,
           );
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -229,18 +257,69 @@ class _ElectricSheetState extends ConsumerState<_ElectricSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final price = _unitPrice;
+    final prev = int.tryParse(_prev.text.trim()) ?? 0;
+    final curr = int.tryParse(_curr.text.trim()) ?? 0;
+    final used = (curr - prev) > 0 ? curr - prev : 0;
+    final bill = used * price;
+
     return _sheetWrap(context, children: [
-      Text('Electricity bill · ${MonthKey.label(widget.record.month)}',
-          style: Theme.of(context).textTheme.titleLarge),
+      Text('Electricity \u00B7 ${MonthKey.label(widget.record.month)}',
+          style: theme.textTheme.titleLarge),
+      const SizedBox(height: 6),
+      if (price == 0)
+        Text('Set this building\'s price per unit first (Building \u2192 Edit).',
+            style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFFC62828)))
+      else
+        Text('Price per unit: ${Money.format(price)}',
+            style: theme.textTheme.bodyMedium),
       const SizedBox(height: 16),
-      TextField(
-        controller: _amount,
-        autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(
-          labelText: 'Electricity amount',
-          prefixText: '\u20B9 ',
-          prefixIcon: Icon(Icons.bolt_outlined),
+      Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _prev,
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                labelText: 'Last reading',
+                suffixText: 'units',
+                prefixIcon: Icon(Icons.history),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _curr,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                labelText: 'Current reading',
+                suffixText: 'units',
+                prefixIcon: Icon(Icons.speed_outlined),
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('$used unit(s) used', style: theme.textTheme.bodyMedium),
+            Text(Money.format(bill),
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+          ],
         ),
       ),
       const SizedBox(height: 20),

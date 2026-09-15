@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money.dart';
 import '../../core/month_key.dart';
 import '../../models/apartment.dart';
+import '../../models/phone_number.dart';
 import '../../models/rent_schedule_entry.dart';
 import '../../repositories/apartment_repository.dart';
+import '../../widgets/phone_field.dart';
 import '../../widgets/ui_helpers.dart';
 import 'contact_picker.dart';
 
@@ -39,14 +41,15 @@ class _ApartmentFormState extends ConsumerState<_ApartmentForm> {
   late final _name = TextEditingController(text: widget.existing?.name ?? '');
   late final _tenant = TextEditingController(text: widget.existing?.tenantName ?? '');
   late final _address = TextEditingController(text: widget.existing?.address ?? '');
-  late final _contact = TextEditingController(text: widget.existing?.contactNumber ?? '');
-  late final _whatsapp = TextEditingController(text: widget.existing?.whatsappNumber ?? '');
-  late final _emergency = TextEditingController(text: widget.existing?.emergencyNumber ?? '');
   late final _deposit = TextEditingController(
       text: widget.existing != null && widget.existing!.securityDeposit > 0
           ? Money.toEditString(widget.existing!.securityDeposit)
           : '');
   final _rent = TextEditingController();
+
+  late PhoneNumber _contact = widget.existing?.contact ?? PhoneNumber.empty;
+  late PhoneNumber _whatsapp = widget.existing?.whatsapp ?? PhoneNumber.empty;
+  late PhoneNumber _emergency = widget.existing?.emergency ?? PhoneNumber.empty;
 
   String _startMonth = MonthKey.current();
   bool _saving = false;
@@ -55,15 +58,10 @@ class _ApartmentFormState extends ConsumerState<_ApartmentForm> {
 
   @override
   void dispose() {
-    for (final c in [_name, _tenant, _address, _contact, _whatsapp, _emergency, _deposit, _rent]) {
+    for (final c in [_name, _tenant, _address, _deposit, _rent]) {
       c.dispose();
     }
     super.dispose();
-  }
-
-  Future<void> _pickInto(TextEditingController target) async {
-    final number = await pickContactPhone(context);
-    if (number != null) target.text = number;
   }
 
   Future<void> _pickStartMonth() async {
@@ -99,9 +97,9 @@ class _ApartmentFormState extends ConsumerState<_ApartmentForm> {
         name: _name.text.trim(),
         tenantName: _tenant.text.trim(),
         address: _address.text.trim(),
-        contactNumber: _contact.text.trim(),
-        whatsappNumber: _whatsapp.text.trim(),
-        emergencyNumber: _emergency.text.trim(),
+        contact: _contact,
+        whatsapp: _whatsapp,
+        emergency: _emergency,
         securityDeposit: Money.parse(_deposit.text),
         rentSchedule: schedule,
         createdAt: widget.existing?.createdAt ?? DateTime.now(),
@@ -168,27 +166,28 @@ class _ApartmentFormState extends ConsumerState<_ApartmentForm> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _contact,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Contact number',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
+              PhoneField(
+                label: 'Contact number',
+                icon: Icons.phone_outlined,
+                initial: _contact,
+                onChanged: (v) => _contact = v,
+                onPickContact: () => pickContactPhone(context),
               ),
               const SizedBox(height: 12),
-              _PhoneWithPicker(
-                controller: _whatsapp,
+              PhoneField(
                 label: 'WhatsApp number',
                 icon: Icons.chat_outlined,
-                onPick: () => _pickInto(_whatsapp),
+                initial: _whatsapp,
+                onChanged: (v) => _whatsapp = v,
+                onPickContact: () => pickContactPhone(context),
               ),
               const SizedBox(height: 12),
-              _PhoneWithPicker(
-                controller: _emergency,
+              PhoneField(
                 label: 'Emergency contact',
                 icon: Icons.emergency_outlined,
-                onPick: () => _pickInto(_emergency),
+                initial: _emergency,
+                onChanged: (v) => _emergency = v,
+                onPickContact: () => pickContactPhone(context),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -256,37 +255,6 @@ class _ApartmentFormState extends ConsumerState<_ApartmentForm> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PhoneWithPicker extends StatelessWidget {
-  const _PhoneWithPicker({
-    required this.controller,
-    required this.label,
-    required this.icon,
-    required this.onPick,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final IconData icon;
-  final VoidCallback onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: TextInputType.phone,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        suffixIcon: IconButton(
-          tooltip: 'Pick from contacts',
-          icon: const Icon(Icons.contacts_outlined),
-          onPressed: onPick,
         ),
       ),
     );

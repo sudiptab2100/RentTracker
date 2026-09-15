@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/money.dart';
 import '../../models/building.dart';
 import '../../repositories/building_repository.dart';
 import '../../widgets/ui_helpers.dart';
@@ -28,12 +29,17 @@ class _BuildingFormState extends ConsumerState<_BuildingForm> {
       TextEditingController(text: widget.existing?.name ?? '');
   late final TextEditingController _address =
       TextEditingController(text: widget.existing?.address ?? '');
+  late final TextEditingController _price = TextEditingController(
+      text: widget.existing != null && widget.existing!.electricityUnitPrice > 0
+          ? Money.toEditString(widget.existing!.electricityUnitPrice)
+          : '');
   bool _saving = false;
 
   @override
   void dispose() {
     _name.dispose();
     _address.dispose();
+    _price.dispose();
     super.dispose();
   }
 
@@ -46,6 +52,7 @@ class _BuildingFormState extends ConsumerState<_BuildingForm> {
         id: widget.existing?.id ?? '',
         name: _name.text.trim(),
         address: _address.text.trim(),
+        electricityUnitPrice: Money.parse(_price.text),
         createdAt: widget.existing?.createdAt ?? DateTime.now(),
       );
       if (widget.existing == null) {
@@ -98,6 +105,17 @@ class _BuildingFormState extends ConsumerState<_BuildingForm> {
                 prefixIcon: Icon(Icons.location_on_outlined),
               ),
               maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _price,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Electricity price per unit',
+                prefixText: '\u20B9 ',
+                prefixIcon: Icon(Icons.bolt_outlined),
+                helperText: 'Applied to all apartments in this building',
+              ),
             ),
             const SizedBox(height: 20),
             FilledButton(

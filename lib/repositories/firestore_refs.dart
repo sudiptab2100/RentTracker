@@ -39,6 +39,14 @@ class FirestoreRefs {
   /// Collection-group query over every apartment owned by this user.
   Query<Json> apartmentsGroup() =>
       db.collectionGroup('apartments').where('ownerId', isEqualTo: uid);
+
+  /// Collection-group query over every floor owned by this user.
+  Query<Json> floorsGroup() =>
+      db.collectionGroup('floors').where('ownerId', isEqualTo: uid);
+
+  /// Collection-group query over every monthly rent record owned by this user.
+  Query<Json> rentRecordsGroup() =>
+      db.collectionGroup('rentRecords').where('ownerId', isEqualTo: uid);
 }
 
 /// Null when signed out; non-null within authenticated screens.

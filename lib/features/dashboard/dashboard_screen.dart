@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_config.dart';
 import '../../core/money.dart';
-import '../../core/month_key.dart';
 import '../../models/building.dart';
 import '../../repositories/building_repository.dart';
 import '../../services/firebase_providers.dart';
 import '../../widgets/async_value_widget.dart';
 import '../../widgets/balance_view.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/responsive.dart';
 import '../../widgets/ui_helpers.dart';
 import '../buildings/building_form.dart';
 import 'dashboard_providers.dart';
@@ -25,7 +25,17 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppConfig.appName),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Image.asset('assets/icon/app_logo.png', width: 28, height: 28),
+            ),
+            const SizedBox(width: 8),
+            const Text(AppConfig.appName),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Settings',
@@ -42,12 +52,12 @@ class DashboardScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(buildingsProvider);
-          ref.invalidate(portfolioSummaryProvider);
-          await ref.read(portfolioSummaryProvider.future);
+          ref.invalidate(overviewProvider);
+          await ref.read(overviewProvider.future);
         },
         child: AsyncValueWidget(
           value: buildings,
-          data: (list) => ListView(
+          data: (list) => ResponsiveCenter(child: ListView(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
             children: [
               _WelcomeHeader(name: user?.displayName ?? user?.email ?? ''),
@@ -77,7 +87,7 @@ class DashboardScreen extends ConsumerWidget {
               else
                 ...list.map((b) => _BuildingCard(building: b)),
             ],
-          ),
+          )),
         ),
       ),
     );
@@ -106,7 +116,7 @@ class _SummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summary = ref.watch(portfolioSummaryProvider);
+    final summary = ref.watch(overviewProvider);
     final buildings = ref.watch(buildingsProvider).value ?? const <Building>[];
     final theme = Theme.of(context);
 
@@ -120,8 +130,7 @@ class _SummaryCard extends ConsumerWidget {
               children: [
                 Icon(Icons.insights_outlined, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('This month · ${MonthKey.shortLabel(MonthKey.current())}',
-                    style: theme.textTheme.titleMedium),
+                Text('Portfolio', style: theme.textTheme.titleMedium),
               ],
             ),
             const SizedBox(height: 16),
@@ -148,7 +157,7 @@ class _SummaryCard extends ConsumerWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Outstanding this month',
+                          Text('Total outstanding',
                               style: theme.textTheme.bodyMedium),
                           Text('${s.dueCount} unit(s) with pending rent',
                               style: theme.textTheme.bodySmall
@@ -191,7 +200,7 @@ class _BuildingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summary = ref.watch(portfolioSummaryProvider).value;
+    final summary = ref.watch(overviewProvider).value;
     final apartments = summary?.apartmentsForBuilding(building.id) ?? 0;
     final due = summary?.dueCountForBuilding(building.id) ?? 0;
     final outstanding = summary?.outstandingForBuilding(building.id) ?? 0;
@@ -248,7 +257,7 @@ class _BuildingCard extends ConsumerWidget {
           if (ok) {
             try {
               await ref.read(buildingRepositoryProvider).deleteDeep(building.id);
-              ref.invalidate(portfolioSummaryProvider);
+              ref.invalidate(overviewProvider);
             } catch (e) {
               if (context.mounted) showSnack(context, '$e', isError: true);
             }

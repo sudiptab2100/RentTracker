@@ -10,8 +10,8 @@ import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/phone_login_screen.dart';
 import '../features/auth/register_screen.dart';
-import '../features/dashboard/dashboard_screen.dart';
 import '../features/floors/floors_screen.dart';
+import '../features/home/home_shell.dart';
 import '../features/reports/report_screen.dart';
 import '../features/settings/data_transfer_screen.dart';
 import '../features/settings/settings_screen.dart';
@@ -53,7 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/register', builder: (c, s) => const RegisterScreen()),
       GoRoute(path: '/phone', builder: (c, s) => const PhoneLoginScreen()),
       GoRoute(path: '/forgot', builder: (c, s) => const ForgotPasswordScreen()),
-      GoRoute(path: '/', builder: (c, s) => const DashboardScreen()),
+      GoRoute(path: '/', builder: (c, s) => const HomeShell()),
       GoRoute(path: '/settings', builder: (c, s) => const SettingsScreen()),
       GoRoute(path: '/settings/data', builder: (c, s) => const DataTransferScreen()),
       GoRoute(

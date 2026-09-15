@@ -86,14 +86,19 @@ class RentEngine {
     await _rent.setRecord(path, record.copyWith(payments: payments));
   }
 
-  Future<void> setElectricBill(
+  Future<void> setElectricReading(
     ApartmentPath path,
     Apartment apt,
-    String month,
-    int amount,
-  ) async {
+    String month, {
+    required int prevUnits,
+    required int currUnits,
+    required int unitPrice,
+  }) async {
     final record = await ensureRecord(path, apt, month);
-    await _rent.setRecord(path, record.copyWith(electricBill: amount));
+    await _rent.setRecord(
+      path,
+      record.copyWith(prevUnits: prevUnits, currUnits: currUnits, unitPrice: unitPrice),
+    );
   }
 
   Future<void> setExtraCharges(

@@ -1,25 +1,25 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:printing/printing.dart';
 
 import '../../core/money.dart';
 import '../../core/month_key.dart';
 import '../../models/apartment.dart';
+import '../../models/ledger.dart';
 import '../../models/rent_record.dart';
 import '../../repositories/apartment_repository.dart';
 import '../../repositories/building_repository.dart';
 import '../../repositories/floor_repository.dart';
 import '../../repositories/rent_repository.dart';
-import '../../services/firebase_providers.dart';
 import '../../widgets/async_value_widget.dart';
 import '../../widgets/balance_view.dart';
+import '../../widgets/responsive.dart';
 import '../../widgets/ui_helpers.dart';
 import '../whatsapp/whatsapp_service.dart';
 import 'csv_export.dart';
-import 'pdf_invoice.dart';
+import 'report_text.dart';
 
 class ReportScreen extends ConsumerWidget {
   const ReportScreen({
@@ -43,29 +43,37 @@ class ReportScreen extends ConsumerWidget {
     final records = ref.watch(rentRecordsProvider(_path)).value ?? const <RentRecord>[];
     final buildings = ref.watch(buildingsProvider).value ?? const [];
     final floors = ref.watch(floorsProvider(buildingId)).value ?? const [];
-    final owner = ref.watch(currentUserProvider);
 
     final buildingName =
         buildings.where((b) => b.id == buildingId).firstOrNull?.name ?? '';
     final floorName = floors.where((f) => f.id == floorId).firstOrNull?.name ?? '';
-    final ownerName = owner?.displayName ?? owner?.email ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: Text('Report · ${MonthKey.shortLabel(month)}')),
+      appBar: AppBar(title: Text('Report \u00B7 ${MonthKey.shortLabel(month)}')),
       body: AsyncValueWidget(
         value: apartmentAsync,
         data: (apt) {
           if (apt == null) {
             return const Center(child: Text('Apartment not found'));
           }
+          final ledger = Ledger.from(records);
           final record = records.where((r) => r.month == month).firstOrNull ??
               RentRecord(
                 month: month,
                 rentAmount: apt.rentForMonth(month),
                 createdAt: DateTime.now(),
               );
+          final text = buildTextReport(
+            buildingName: buildingName,
+            floorName: floorName,
+            apt: apt,
+            record: record,
+            ledger: ledger,
+          );
+          final totalPayable = ledger.cumulativeThrough(month);
+          final previous = ledger.previousBalanceFor(month);
 
-          return ListView(
+          return ResponsiveCenter(child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _ReportCard(
@@ -73,82 +81,71 @@ class ReportScreen extends ConsumerWidget {
                 record: record,
                 buildingName: buildingName,
                 floorName: floorName,
+                previousBalance: previous,
+                totalPayable: totalPayable,
               ),
               const SizedBox(height: 20),
-              Text('Share & export',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
               FilledButton.icon(
-                onPressed: () => _printPdf(apt, record, buildingName, floorName, ownerName),
-                icon: const Icon(Icons.print_outlined),
-                label: const Text('Preview / Print PDF'),
+                onPressed: () => _sendReport(context, apt, text),
+                icon: const Icon(Icons.send_outlined),
+                label: const Text('Send report on WhatsApp'),
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
-                onPressed: () => _sharePdf(
-                    context, apt, record, buildingName, floorName, ownerName),
-                icon: const Icon(Icons.share_outlined),
-                label: const Text('Send PDF via WhatsApp / share'),
+                onPressed: () => _copy(context, text),
+                icon: const Icon(Icons.copy_outlined),
+                label: const Text('Copy report text'),
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
-                onPressed: () =>
-                    _shareCsv(context, apt, records, buildingName, floorName),
+                onPressed: () => _shareCsv(context, apt, records, buildingName, floorName),
                 icon: const Icon(Icons.table_view_outlined),
                 label: const Text('Export rent history (CSV)'),
               ),
-              if (apt.whatsappNumber.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _openChat(context, apt, record),
-                  icon: const Icon(Icons.chat_outlined),
-                  label: const Text('Open tenant WhatsApp chat'),
+              const SizedBox(height: 16),
+              Text('Report preview', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-              const SizedBox(height: 12),
+                child: SelectableText(
+                  text,
+                  style: const TextStyle(fontFamily: 'monospace', height: 1.4),
+                ),
+              ),
+              const SizedBox(height: 8),
               Text(
-                'Note: WhatsApp cannot silently attach files, so the PDF opens in '
-                'the share sheet — pick WhatsApp and tap send.',
+                'Send copies the report and opens the tenant\'s WhatsApp chat with '
+                'the text pre-filled \u2014 just tap send (or paste if needed).',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
-          );
+          ));
         },
       ),
     );
   }
 
-  Future<void> _printPdf(Apartment apt, RentRecord record, String b, String f,
-      String owner) async {
-    await Printing.layoutPdf(
-      onLayout: (_) => buildMonthlyReportPdf(
-        ownerName: owner,
-        buildingName: b,
-        floorName: f,
-        apt: apt,
-        record: record,
-      ),
-    );
+  Future<void> _copy(BuildContext context, String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (context.mounted) showSnack(context, 'Report copied to clipboard');
   }
 
-  Future<void> _sharePdf(BuildContext context, Apartment apt, RentRecord record,
-      String b, String f, String owner) async {
-    try {
-      final bytes = await buildMonthlyReportPdf(
-        ownerName: owner,
-        buildingName: b,
-        floorName: f,
-        apt: apt,
-        record: record,
-      );
-      final filename =
-          'Rent_${apt.name}_${record.month}.pdf'.replaceAll(RegExp(r'\s+'), '_');
-      final caption = 'Rent statement for ${MonthKey.label(record.month)} — '
-          '${apt.name}. Balance: ${Money.format(record.outstanding)}.';
-      await whatsAppService.shareBytes(bytes, filename,
-          text: caption, subject: 'Rent statement ${record.month}');
-    } catch (e) {
-      if (context.mounted) showSnack(context, '$e', isError: true);
+  Future<void> _sendReport(BuildContext context, Apartment apt, String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (apt.whatsapp.isEmpty) {
+      if (context.mounted) {
+        showSnack(context, 'No WhatsApp number set. Report copied to clipboard.');
+      }
+      return;
+    }
+    final ok = await whatsAppService.openChat(phone: apt.whatsapp.e164, text: text);
+    if (!ok && context.mounted) {
+      showSnack(context, 'Report copied. Could not open WhatsApp.', isError: true);
     }
   }
 
@@ -166,22 +163,7 @@ class ReportScreen extends ConsumerWidget {
       if (context.mounted) showSnack(context, '$e', isError: true);
     }
   }
-
-  Future<void> _openChat(
-      BuildContext context, Apartment apt, RentRecord record) async {
-    final message = record.balance > 0
-        ? 'Hello ${apt.tenantName}, rent for ${MonthKey.label(record.month)} '
-            'of ${Money.format(record.balance)} is pending.'
-        : 'Hello ${apt.tenantName}, thank you — rent for '
-            '${MonthKey.label(record.month)} is fully settled.';
-    final ok = await whatsAppService.openChat(phone: apt.whatsappNumber, text: message);
-    if (!ok && context.mounted) {
-      showSnack(context, 'Could not open WhatsApp', isError: true);
-    }
-  }
 }
-
-/// Encodes a string as UTF-8 bytes for sharing.
 
 class _ReportCard extends StatelessWidget {
   const _ReportCard({
@@ -189,12 +171,16 @@ class _ReportCard extends StatelessWidget {
     required this.record,
     required this.buildingName,
     required this.floorName,
+    required this.previousBalance,
+    required this.totalPayable,
   });
 
   final Apartment apt;
   final RentRecord record;
   final String buildingName;
   final String floorName;
+  final int previousBalance;
+  final int totalPayable;
 
   @override
   Widget build(BuildContext context) {
@@ -205,31 +191,46 @@ class _ReportCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Monthly rent statement', style: theme.textTheme.titleLarge),
+            Text('Rent statement', style: theme.textTheme.titleLarge),
             Text(MonthKey.label(record.month),
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: theme.colorScheme.outline)),
             const Divider(height: 24),
             _kv(context, 'Tenant', apt.tenantName.isEmpty ? '-' : apt.tenantName),
-            _kv(context, 'Unit', '$buildingName · $floorName · ${apt.name}'),
-            if (apt.contactNumber.isNotEmpty)
-              _kv(context, 'Contact', apt.contactNumber),
+            _kv(context, 'Apartment',
+                '${apt.name}${buildingName.isEmpty ? '' : ' \u00B7 $buildingName'}'
+                '${floorName.isEmpty ? '' : ' \u00B7 $floorName'}'),
             const Divider(height: 24),
             _line(context, 'Rent', record.rentAmount),
-            if (record.electricBill > 0)
+            if (record.electricBill > 0 || record.hasMeterReadings) ...[
               _line(context, 'Electricity', record.electricBill),
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 4),
+                child: Text(
+                  '${record.currUnits} - ${record.prevUnits} = ${record.unitsUsed} units '
+                  '\u00D7 ${Money.format(record.unitPrice)}/unit',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.outline),
+                ),
+              ),
+            ],
             for (final c in record.extraCharges)
-              _line(context, c.label.isEmpty ? 'Extra charge' : c.label, c.amount),
+              if (c.amount != 0)
+                _line(context, c.label.isEmpty ? 'Extra charge' : c.label, c.amount),
+            if (previousBalance > 0)
+              _line(context, 'Previous month due', previousBalance)
+            else if (previousBalance < 0)
+              _line(context, 'Previous month advance', -previousBalance),
             const Divider(height: 16),
-            _line(context, 'Total due', record.totalDue, bold: true),
-            _line(context, 'Paid', record.paidAmount),
+            _line(context, 'This month charges', record.monthCharges, bold: true),
+            _line(context, 'Paid this month', record.paidAmount),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(record.isSettled ? 'Balance (settled)' : 'Balance due',
+                Text(totalPayable > 0 ? 'Total payable' : 'Balance',
                     style: theme.textTheme.titleMedium),
-                BalanceText(balance: record.balance, style: theme.textTheme.titleMedium),
+                BalanceText(balance: totalPayable, style: theme.textTheme.titleMedium),
               ],
             ),
             if (apt.securityDeposit > 0) ...[
@@ -248,7 +249,7 @@ class _ReportCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 90, child: Text(k, style: Theme.of(context).textTheme.bodySmall)),
+            SizedBox(width: 96, child: Text(k, style: Theme.of(context).textTheme.bodySmall)),
             Expanded(child: Text(v)),
           ],
         ),

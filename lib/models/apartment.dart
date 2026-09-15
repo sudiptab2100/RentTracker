@@ -1,5 +1,6 @@
 import '../core/firestore_utils.dart';
 import '../core/month_key.dart';
+import 'phone_number.dart';
 import 'rent_schedule_entry.dart';
 
 /// An apartment/unit within a [Floor], including tenant contact details, the
@@ -11,9 +12,9 @@ class Apartment {
   final String name;
   final String tenantName;
   final String address;
-  final String contactNumber;
-  final String whatsappNumber;
-  final String emergencyNumber;
+  final PhoneNumber contact;
+  final PhoneNumber whatsapp;
+  final PhoneNumber emergency;
 
   /// Security deposit in integer minor units (paise). Tracked separately from
   /// rent and never mixed into the monthly balance.
@@ -28,9 +29,9 @@ class Apartment {
     required this.name,
     this.tenantName = '',
     this.address = '',
-    this.contactNumber = '',
-    this.whatsappNumber = '',
-    this.emergencyNumber = '',
+    this.contact = PhoneNumber.empty,
+    this.whatsapp = PhoneNumber.empty,
+    this.emergency = PhoneNumber.empty,
     this.securityDeposit = 0,
     this.rentSchedule = const [],
     required this.createdAt,
@@ -47,7 +48,6 @@ class Apartment {
       }
     }
     if (chosen != null) return chosen.amount;
-    // Month precedes the earliest schedule entry: fall back to the earliest.
     RentScheduleEntry? earliest;
     for (final e in rentSchedule) {
       if (earliest == null || MonthKey.compare(e.effectiveFrom, earliest.effectiveFrom) < 0) {
@@ -77,9 +77,9 @@ class Apartment {
         name: (map['name'] ?? '') as String,
         tenantName: (map['tenantName'] ?? '') as String,
         address: (map['address'] ?? '') as String,
-        contactNumber: (map['contactNumber'] ?? '') as String,
-        whatsappNumber: (map['whatsappNumber'] ?? '') as String,
-        emergencyNumber: (map['emergencyNumber'] ?? '') as String,
+        contact: readPhone(map, 'contact', 'contactNumber'),
+        whatsapp: readPhone(map, 'whatsapp', 'whatsappNumber'),
+        emergency: readPhone(map, 'emergency', 'emergencyNumber'),
         securityDeposit: asInt(map['securityDeposit']),
         rentSchedule: ((map['rentSchedule'] ?? const []) as List)
             .map((e) => RentScheduleEntry.fromMap(Map<String, dynamic>.from(e as Map)))
@@ -91,9 +91,9 @@ class Apartment {
         'name': name,
         'tenantName': tenantName,
         'address': address,
-        'contactNumber': contactNumber,
-        'whatsappNumber': whatsappNumber,
-        'emergencyNumber': emergencyNumber,
+        'contact': contact.toMap(),
+        'whatsapp': whatsapp.toMap(),
+        'emergency': emergency.toMap(),
         'securityDeposit': securityDeposit,
         'rentSchedule': rentSchedule.map((e) => e.toMap()).toList(),
       };
@@ -118,9 +118,9 @@ class Apartment {
     String? name,
     String? tenantName,
     String? address,
-    String? contactNumber,
-    String? whatsappNumber,
-    String? emergencyNumber,
+    PhoneNumber? contact,
+    PhoneNumber? whatsapp,
+    PhoneNumber? emergency,
     int? securityDeposit,
     List<RentScheduleEntry>? rentSchedule,
   }) =>
@@ -129,9 +129,9 @@ class Apartment {
         name: name ?? this.name,
         tenantName: tenantName ?? this.tenantName,
         address: address ?? this.address,
-        contactNumber: contactNumber ?? this.contactNumber,
-        whatsappNumber: whatsappNumber ?? this.whatsappNumber,
-        emergencyNumber: emergencyNumber ?? this.emergencyNumber,
+        contact: contact ?? this.contact,
+        whatsapp: whatsapp ?? this.whatsapp,
+        emergency: emergency ?? this.emergency,
         securityDeposit: securityDeposit ?? this.securityDeposit,
         rentSchedule: rentSchedule ?? this.rentSchedule,
         createdAt: createdAt,

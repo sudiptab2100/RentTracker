@@ -83,7 +83,7 @@ class FloorsScreen extends ConsumerWidget {
                             await ref
                                 .read(floorRepositoryProvider)
                                 .deleteDeep(buildingId, floor.id);
-                            ref.invalidate(portfolioSummaryProvider);
+                            ref.invalidate(overviewProvider);
                           } catch (e) {
                             if (context.mounted) showSnack(context, '$e', isError: true);
                           }

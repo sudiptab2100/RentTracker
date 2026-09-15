@@ -99,7 +99,7 @@ class _DataTransferScreenState extends ConsumerState<DataTransferScreen> {
           .read(exportRepositoryProvider)
           .importAll(data, wipeExisting: mode == _ImportMode.replace);
       ref.invalidate(buildingsProvider);
-      ref.invalidate(portfolioSummaryProvider);
+      ref.invalidate(overviewProvider);
       if (mounted) {
         showSnack(context, 'Imported $res');
       }

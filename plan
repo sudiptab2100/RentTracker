@@ -27,3 +27,20 @@ Create a lightweight Android Flutter Application for tracking rent for Flat owne
 - Also send reminder to tenants for pending rent payments via whatsapp
 - Owner should be able to export all past rent reports and tenant details to a CSV file for record-keeping.
 - Keep a master export feature for all buildings, floors, and apartments data in a best appropiate format so that if we need to migrate to another app, we can easily do so. Also keep a master import feature also which will allow us to import data in the same app pointing to different firebase project or database and data will be synced to DB accordingly.
+
+
+Phone Login Number, Contact Number, Whatsapp Contact Number, and Emergency Contact Number all should have separate country code field and number field. The app should validate the phone number format based on the selected country code. Numbers should be 10 digits only and default country code is +91 (India).
+A separate section for unpaid rent should be there where owner can see all the tenants who have payment due. Owner should be able to filter the list based on Buildings, Floors, and Apartments. Owner should be able to send reminders to tenants with pending rent payments via WhatsApp directly from the app.
+Report should have following only:
+- Tenant Name
+- Apartment Number
+- Rent Amount
+- Electric Bill Amount
+  - Unit of usage last month
+  - Unit usage current month
+  - Price per unit (This will set by owner for each building, will be used for all apartments in a building)
+  - Total Electric Bill Amount = (current usage - last usage) * price per unit
+- Any Extra Charges (if any)
+- Previous Month Due Amount (remaining payment) / Balance (extra payment)
+Instead of sending PDF reports to tenants, send text reports. Send report button will copy the text report and tenant's whatsapp chat will open where owner can paste the report and send it to tenant.
+Add relevant logo to the app and app icon. The app should have a clean and user-friendly interface, with easy navigation and intuitive design. Use appropriate colors and fonts to enhance the visual appeal of the app. The app should be responsive and work well on different screen sizes and orientations.

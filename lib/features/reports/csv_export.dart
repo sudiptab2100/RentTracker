@@ -23,6 +23,7 @@ class CsvExport {
       [
         'Month',
         'Rent',
+        'Units used',
         'Electricity',
         'Extra charges',
         'Total due',
@@ -36,6 +37,7 @@ class CsvExport {
       rows.add([
         r.month,
         _rupees(r.rentAmount),
+        r.unitsUsed,
         _rupees(r.electricBill),
         _rupees(r.extraTotal),
         _rupees(r.totalDue),
@@ -76,9 +78,9 @@ class CsvExport {
             f.floor.name,
             apt.name,
             apt.tenantName,
-            apt.contactNumber,
-            apt.whatsappNumber,
-            apt.emergencyNumber,
+            apt.contact.display,
+            apt.whatsapp.display,
+            apt.emergency.display,
             apt.address,
             _rupees(apt.securityDeposit),
             _rupees(apt.currentRent),

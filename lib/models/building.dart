@@ -5,12 +5,17 @@ class Building {
   final String id;
   final String name;
   final String address;
+
+  /// Electricity price per meter unit, in integer minor units (paise/unit).
+  /// Set per building and applied to all its apartments.
+  final int electricityUnitPrice;
   final DateTime createdAt;
 
   const Building({
     required this.id,
     required this.name,
     this.address = '',
+    this.electricityUnitPrice = 0,
     required this.createdAt,
   });
 
@@ -18,19 +23,24 @@ class Building {
         id: id,
         name: (map['name'] ?? '') as String,
         address: (map['address'] ?? '') as String,
+        electricityUnitPrice: asInt(map['electricityUnitPrice']),
         createdAt: tsToDate(map['createdAt']),
       );
 
-  Map<String, dynamic> toMap() => {
+  Map<String, dynamic> _fields() => {
         'name': name,
         'address': address,
+        'electricityUnitPrice': electricityUnitPrice,
+      };
+
+  Map<String, dynamic> toMap() => {
+        ..._fields(),
         'createdAt': dateToTs(createdAt),
       };
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'name': name,
-        'address': address,
+        ..._fields(),
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -38,13 +48,15 @@ class Building {
         id: (json['id'] ?? '') as String,
         name: (json['name'] ?? '') as String,
         address: (json['address'] ?? '') as String,
+        electricityUnitPrice: asInt(json['electricityUnitPrice']),
         createdAt: tsToDate(json['createdAt']),
       );
 
-  Building copyWith({String? name, String? address}) => Building(
+  Building copyWith({String? name, String? address, int? electricityUnitPrice}) => Building(
         id: id,
         name: name ?? this.name,
         address: address ?? this.address,
+        electricityUnitPrice: electricityUnitPrice ?? this.electricityUnitPrice,
         createdAt: createdAt,
       );
 }
