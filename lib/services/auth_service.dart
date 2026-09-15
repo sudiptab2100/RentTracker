@@ -189,9 +189,27 @@ class AuthService {
       case 'weak-password':
         return 'Please choose a stronger password (at least 6 characters).';
       case 'operation-not-allowed':
-        return 'This sign-in method is not enabled in Firebase.';
+        return 'This sign-in method is not enabled for this Firebase project. '
+            'Enable it in Firebase console → Authentication → Sign-in method '
+            '(make sure it is the same project the app is configured with), then Save.';
+      case 'missing-client-identifier':
+      case 'app-not-authorized':
+        return 'This app is not authorized for phone auth. Add your SHA-1 and '
+            'SHA-256 fingerprints to the Firebase Android app, re-download '
+            'google-services.json, and rebuild.';
+      case 'captcha-check-failed':
+        return 'App verification failed. Ensure SHA-256 is registered and Play '
+            'Integrity is enabled for the project, then rebuild.';
       case 'invalid-verification-code':
         return 'The verification code is incorrect.';
+      case 'invalid-verification-id':
+      case 'missing-verification-code':
+      case 'missing-verification-id':
+        return 'Enter the code you received.';
+      case 'session-expired':
+        return 'The code expired. Please request a new one.';
+      case 'quota-exceeded':
+        return 'SMS quota exceeded. Try again later or use a test phone number.';
       case 'invalid-phone-number':
         return 'That phone number is not valid.';
       case 'too-many-requests':
