@@ -16,10 +16,10 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform => android;
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: _placeholderApiKey,
-    appId: '1:000000000000:android:0000000000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'your-project-id',
-    storageBucket: 'your-project-id.firebasestorage.app',
+    apiKey: 'AIzaSyCfzf88SoD8fGagRphLa2OqIt-V1aCbtho',
+    appId: '1:268504006821:android:fae4149a60ccc988ad0d4c',
+    messagingSenderId: '268504006821',
+    projectId: 'renttracker-vicky',
+    storageBucket: 'renttracker-vicky.firebasestorage.app',
   );
 }

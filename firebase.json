@@ -1,6 +1,1 @@
-{
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  }
-}
+{"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"flutter":{"platforms":{"android":{"default":{"projectId":"renttracker-vicky","appId":"1:268504006821:android:fae4149a60ccc988ad0d4c","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"renttracker-vicky","configurations":{"android":"1:268504006821:android:fae4149a60ccc988ad0d4c"}}}}}}

@@ -10,7 +10,7 @@ class AppConfig {
   /// Sign-In on Android when not using google-services.json. Fill this in after
   /// creating your Firebase project (see SETUP.md). Leave empty to disable
   /// Google Sign-In gracefully.
-  static const String googleServerClientId = '';
+  static const String googleServerClientId = '268504006821-agkpvg51ve56f70keth5ddk9ate93jr8.apps.googleusercontent.com';
 
   static bool get hasGoogleConfig => googleServerClientId.isNotEmpty;
 
