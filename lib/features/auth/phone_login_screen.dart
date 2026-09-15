@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../core/app_config.dart';
 import '../../models/phone_number.dart';
 import '../../services/auth_service.dart';
 import '../../services/firebase_providers.dart';
@@ -93,7 +93,6 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Phone sign in')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -103,8 +102,22 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.sms_outlined, size: 48, color: theme.colorScheme.primary),
-                  const SizedBox(height: 16),
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset('assets/icon/app_logo.png',
+                          width: 88, height: 88),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(AppConfig.appName,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineMedium),
+                  Text('Sign in with your phone number',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.outline)),
+                  const SizedBox(height: 28),
                   if (!_codeSent)
                     PhoneField(
                       label: 'Phone number',
@@ -146,10 +159,17 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
                       onPressed: _loading ? null : _sendCode,
                       child: const Text('Resend code'),
                     ),
-                  TextButton(
-                    onPressed: _loading ? null : () => context.pop(),
-                    child: const Text('Back to sign in'),
-                  ),
+                  if (_codeSent)
+                    TextButton(
+                      onPressed: _loading
+                          ? null
+                          : () => setState(() {
+                                _codeSent = false;
+                                _verificationId = null;
+                                _code.clear();
+                              }),
+                      child: const Text('Change number'),
+                    ),
                 ],
               ),
             ),

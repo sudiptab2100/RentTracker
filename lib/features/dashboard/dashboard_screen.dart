@@ -13,6 +13,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/responsive.dart';
 import '../../widgets/ui_helpers.dart';
 import '../buildings/building_form.dart';
+import '../search/apartment_search_delegate.dart';
 import 'dashboard_providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -37,6 +38,22 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Search tenants',
+            icon: const Icon(Icons.search),
+            onPressed: () async {
+              final apts = ref.read(overviewProvider).value?.apartments ??
+                  const <ApartmentOverview>[];
+              final selected = await showSearch<ApartmentOverview?>(
+                context: context,
+                delegate: ApartmentSearchDelegate(apts),
+              );
+              if (selected != null && context.mounted) {
+                context.push(
+                    '/building/${selected.buildingId}/floor/${selected.floorId}/apt/${selected.apartment.id}');
+              }
+            },
+          ),
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined),
