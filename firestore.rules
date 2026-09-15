@@ -2,18 +2,37 @@ rules_version = '2';
 
 // RentTracker security rules.
 // All owner data lives under users/{uid}/... so every document is scoped to its
-// owner. Collection-group queries (apartments, rentRecords) additionally filter
-// on ownerId == uid, which these rules enforce via the document path.
+// owner via the document path. The dashboard and Unpaid tab additionally use
+// collection-group queries (apartments/floors/rentRecords) filtered by
+// ownerId == uid; collection-group queries require rules matched with the
+// recursive {path=**} prefix, so those are declared explicitly below.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // The owner's profile document and everything nested beneath it.
+    // The owner's profile document and everything nested beneath it
+    // (direct/hierarchical reads, writes and deletes).
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
 
       match /{document=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // Collection-group query support. Every apartment/floor/rentRecord document
+    // carries an `ownerId` field; the app queries with
+    // where('ownerId', '==', uid), which these rules authorize.
+    match /{path=**}/apartments/{apartmentId} {
+      allow read: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+    }
+    match /{path=**}/floors/{floorId} {
+      allow read: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+    }
+    match /{path=**}/rentRecords/{recordId} {
+      allow read: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
     }
   }
 }
