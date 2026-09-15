@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Central Material 3 theme for the app.
+/// Central Material 3 theme for the app (light + dark).
 class AppTheme {
   static const Color _seed = Color(0xFF2E7D6F); // teal-green
 
-  static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(seedColor: _seed);
+  static ThemeData light() => _build(Brightness.light);
+  static ThemeData dark() => _build(Brightness.dark);
+
+  static ThemeData _build(Brightness brightness) {
+    final scheme = ColorScheme.fromSeed(seedColor: _seed, brightness: brightness);
     return ThemeData(
       useMaterial3: true,
+      brightness: brightness,
       colorScheme: scheme,
       fontFamily: 'Poppins',
       scaffoldBackgroundColor: scheme.surface,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_config.dart';
+import '../../app/theme_controller.dart';
 import '../../services/firebase_providers.dart';
 import '../../widgets/ui_helpers.dart';
 
@@ -12,6 +13,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final themeMode = ref.watch(themeModeProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -23,6 +25,41 @@ class SettingsScreen extends ConsumerWidget {
                 ? user!.displayName!
                 : 'Owner'),
             subtitle: Text(user?.email ?? user?.phoneNumber ?? ''),
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                Icon(Icons.brightness_6_outlined,
+                    color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 16),
+                Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(
+                    value: ThemeMode.system,
+                    label: Text('System'),
+                    icon: Icon(Icons.brightness_auto_outlined)),
+                ButtonSegment(
+                    value: ThemeMode.light,
+                    label: Text('Light'),
+                    icon: Icon(Icons.light_mode_outlined)),
+                ButtonSegment(
+                    value: ThemeMode.dark,
+                    label: Text('Dark'),
+                    icon: Icon(Icons.dark_mode_outlined)),
+              ],
+              selected: {themeMode},
+              showSelectedIcon: false,
+              onSelectionChanged: (s) =>
+                  ref.read(themeModeProvider.notifier).setMode(s.first),
+            ),
           ),
           const Divider(),
           ListTile(

@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/apartments/apartment_detail_screen.dart';
 import '../features/apartments/apartments_screen.dart';
-import '../features/auth/phone_login_screen.dart';
+import '../features/auth/login_screen.dart';
 import '../features/floors/floors_screen.dart';
 import '../features/home/home_shell.dart';
 import '../features/reports/report_screen.dart';
@@ -46,7 +46,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (c, s) => const PhoneLoginScreen()),
+      GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
       GoRoute(path: '/', builder: (c, s) => const HomeShell()),
       GoRoute(path: '/settings', builder: (c, s) => const SettingsScreen()),
       GoRoute(path: '/settings/data', builder: (c, s) => const DataTransferScreen()),

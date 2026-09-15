@@ -5,6 +5,7 @@ import '../core/app_config.dart';
 import '../features/auth/firebase_setup_screen.dart';
 import 'router.dart';
 import 'theme.dart';
+import 'theme_controller.dart';
 
 class RentTrackerApp extends ConsumerWidget {
   const RentTrackerApp({super.key, required this.firebaseReady});
@@ -13,10 +14,13 @@ class RentTrackerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     if (!firebaseReady) {
       return MaterialApp(
         title: AppConfig.appName,
         theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: themeMode,
         debugShowCheckedModeBanner: false,
         home: const FirebaseSetupScreen(),
       );
@@ -24,6 +28,8 @@ class RentTrackerApp extends ConsumerWidget {
     return MaterialApp.router(
       title: AppConfig.appName,
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: themeMode,
       debugShowCheckedModeBanner: false,
       routerConfig: ref.watch(routerProvider),
     );
