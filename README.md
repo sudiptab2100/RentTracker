@@ -57,3 +57,28 @@ flutter build apk --release
 ## Security
 Firestore rules (`firestore.rules`) restrict all data to its owner. Deploy with
 `firebase deploy --only firestore:rules`.
+
+## Download the app (GitHub Releases)
+
+Release APKs are built and published automatically by GitHub Actions
+(`.github/workflows/build-apk.yml`). Once set up, anyone can download the APK
+from the repository's **Releases** page.
+
+**One-time setup (secrets):**
+```bash
+gh auth login                       # authenticate the GitHub CLI
+./scripts/setup_ci_secrets.sh       # uploads GOOGLE_SERVICES_JSON + DEBUG_KEYSTORE_BASE64
+```
+(Or add those two secrets manually in GitHub → Settings → Secrets and variables → Actions.)
+
+**Publish a release:**
+```bash
+git tag v1.0.0
+git push origin v1.0.0              # triggers the build; APK is attached to the Release
+```
+You can also run the workflow manually (Actions → Build & Release APK → Run
+workflow); manual runs upload the APK as a workflow artifact.
+
+The release APK is signed with the debug keystore whose SHA is registered in
+Firebase, so Google Sign-In works on the download. For a store release, swap in a
+dedicated release keystore and register its SHA.
